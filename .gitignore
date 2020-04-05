@@ -1,4 +1,7 @@
 lfw/
 dog_images/
 .ipynb_checkpoints/
+.idea/
+*.xlsx
 model*
+dogsenv/
