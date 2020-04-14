@@ -5,3 +5,4 @@ dog_images/
 *.xlsx
 model*
 dogsenv/
+.DS_Store
