@@ -117,3 +117,46 @@ def reboot(datasets, loaders, model, criterion, default_model):
     new_criterion = criterion_scratch = nn.CrossEntropyLoss()
     
     return {'train' : trainloader, 'valid' : validloader, 'test' : testloader}, new_model, new_criterion
+
+def run_experiments(datasets, loaders, hyperparameters, use_cuda=True, model_file='model'):
+  current_optimizer = ''
+  model_scratch = hyperparameters['model']
+  criterion_scratch = ''
+  for optimizer in hyperparameters['optimizers']:
+      for lr in hyperparameters['learning_rates']:
+          loaders, model_scratch, criterion_scratch = reboot(datasets, 
+                                                             loaders, 
+                                                             model_scratch, 
+                                                             criterion_scratch, 
+                                                             hyperparameters['model'])
+          del current_optimizer
+          current_optimizer = optimizer(model_scratch.parameters(), lr)
+          
+          print(current_optimizer)
+          model, train_losses, valid_losses, time_spent = train(hyperparameters['epochs'], 
+                                                                loaders, 
+                                                                model_scratch, 
+                                                                current_optimizer, 
+                                                                criterion_scratch, 
+                                                                use_cuda, 
+                                                                model_file + '_lr_' + str(lr) + '.pt',
+                                                                verbose=True)
+          
+          print("time spent: ", str(datetime.timedelta(seconds=time_spent)))
+          
+          min_train_loss = float(min(train_losses))
+          min_valid_loss = float(min(valid_losses))
+          
+          print("Minimum trainig loss: ", min_train_loss)
+          print("Minimum validation loss: ", min_valid_loss)
+
+          plt.plot(train_losses, label='Training loss')
+          plt.plot(valid_losses, label='Validation loss')
+          
+          plt.legend(frameon=False)
+          plt.show()
+        
+          model_scratch.load_state_dict(torch.load(model_file + '_lr_' + str(lr) + '.pt'))
+          test(loaders, model_scratch, criterion_scratch, use_cuda)
+     
+
