@@ -3,26 +3,9 @@ import time
 import torch
 import torch.nn as nn
 from torchvision import datasets
-
-def build_datasets(train_path, validation_path, test_path, 
-                    default_transformations, mixed_transformations) :
-
-  train_data = datasets.ImageFolder(train_path, transform=mixed_transformations)
-  valid_data = datasets.ImageFolder(validation_path, transform=default_transformations)
-  test_data = datasets.ImageFolder(test_path, transform=default_transformations)
-
-  trainloader = torch.utils.data.DataLoader(train_data, batch_size=64, shuffle=True, num_workers=0)
-  validloader = torch.utils.data.DataLoader(valid_data, batch_size=32, shuffle=True, num_workers=0)
-  testloader = torch.utils.data.DataLoader(test_data, batch_size=32, shuffle=False, num_workers=0)
-
-
-  return {'train': train_data, 'validation': valid_data, 'test': test_data},\
-         {'train' : trainloader, 'valid' : validloader, 'test' : testloader}
-
+from utils.preprocess import *
 
 def train(n_epochs, loaders, model, optimizer, criterion, use_cuda, save_path, verbose=False):
-    """returns trained model"""
-    
     valid_loss_min = np.Inf 
     initial_time = time.time()
     train_losses, valid_losses = [], []
@@ -117,49 +100,77 @@ def reboot(datasets, loaders, model, criterion, default_model):
     
     return {'train' : trainloader, 'valid' : validloader, 'test' : testloader}, new_model, new_criterion
 
-def run_experiments(datasets, loaders, hyperparameters, model_file='model'):
+def build_datasets(train_path, validation_path, test_path, 
+                    default_transformations, mixed_transformations) :
+
+  train_data = datasets.ImageFolder(train_path, transform=mixed_transformations)
+  valid_data = datasets.ImageFolder(validation_path, transform=default_transformations)
+  test_data = datasets.ImageFolder(test_path, transform=default_transformations)
+
+  trainloader = torch.utils.data.DataLoader(train_data, batch_size=64, shuffle=True, num_workers=0)
+  validloader = torch.utils.data.DataLoader(valid_data, batch_size=32, shuffle=True, num_workers=0)
+  testloader = torch.utils.data.DataLoader(test_data, batch_size=32, shuffle=False, num_workers=0)
+
+
+  return {'train': train_data, 'validation': valid_data, 'test': test_data},\
+         {'train' : trainloader, 'valid' : validloader, 'test' : testloader}
+
+
+def run_experiments(paths, hyperparameters, model_file='model'):
   current_optimizer = ''
   criterion_scratch = ''
-  for model in hyperparameters['models']:
-    print(model)
-    use_cuda = torch.cuda.is_available()
-    if use_cuda:
-        model.cuda()
-    for optimizer in hyperparameters['optimizers']:
-        for lr in hyperparameters['learning_rates']:
-            loaders, model, criterion_scratch = reboot(datasets, 
-                                                              loaders, 
-                                                              model, 
-                                                              criterion_scratch, 
-                                                              model)
-            del current_optimizer
-            current_optimizer = optimizer(model.parameters(), lr)
-            
-            print(current_optimizer)
-            model, train_losses, valid_losses, time_spent = train(hyperparameters['epochs'], 
-                                                                  loaders, 
-                                                                  model, 
-                                                                  current_optimizer, 
-                                                                  criterion_scratch, 
-                                                                  use_cuda, 
-                                                                  model_file + '_lr_' + str(lr) + '.pt',
-                                                                  verbose=True)
-            
-            print("time spent: ", str(datetime.timedelta(seconds=time_spent)))
-            
-            min_train_loss = float(min(train_losses))
-            min_valid_loss = float(min(valid_losses))
-            
-            print("Minimum trainig loss: ", min_train_loss)
-            print("Minimum validation loss: ", min_valid_loss)
 
-            plt.plot(train_losses, label='Training loss')
-            plt.plot(valid_losses, label='Validation loss')
+  for augmentations in hyperparameters['augmentations']:
+    default_transformations = default_transformation()
+    training_transformations = mixed_transformation(ImgAugTransform(augmentations))
+    datasets, loaders = build_datasets(paths['train_path'], 
+                                        paths['validation_path'], 
+                                        paths['test_path'], 
+                                        default_transformations, 
+                                        training_transformations)
+    for model in hyperparameters['models']:
+      #print(model)
+      use_cuda = torch.cuda.is_available()
+      if use_cuda:
+          print('cuda available')
+          model.cuda()
+      for optimizer in hyperparameters['optimizers']:
+          for lr in hyperparameters['learning_rates']:
+              print('running experiment with hyperparameters:')
+              print(augmentations, model, optimizer, lr)
+              loaders, model, criterion_scratch = reboot(datasets, 
+                                                                loaders, 
+                                                                model, 
+                                                                criterion_scratch, 
+                                                                model)
+              del current_optimizer
+              current_optimizer = optimizer(model.parameters(), lr)
+              
+              print(current_optimizer)
+              model, train_losses, valid_losses, time_spent = train(hyperparameters['epochs'], 
+                                                                    loaders, 
+                                                                    model, 
+                                                                    current_optimizer, 
+                                                                    criterion_scratch, 
+                                                                    use_cuda, 
+                                                                    model_file + '_lr_' + str(lr) + '.pt',
+                                                                    verbose=True)
+              
+              print("time spent: ", str(datetime.timedelta(seconds=time_spent)))
+              
+              min_train_loss = float(min(train_losses))
+              min_valid_loss = float(min(valid_losses))
+              
+              print("Minimum trainig loss: ", min_train_loss)
+              print("Minimum validation loss: ", min_valid_loss)
+
+              plt.plot(train_losses, label='Training loss')
+              plt.plot(valid_losses, label='Validation loss')
+              
+              plt.legend(frameon=False)
+              plt.show()
             
-            plt.legend(frameon=False)
-            plt.show()
-          
-            model.load_state_dict(torch.load(model_file + '_lr_' + str(lr) + '.pt'))
-            test(loaders, model, criterion_scratch, use_cuda)
-      
+              model.load_state_dict(torch.load(model_file + '_lr_' + str(lr) + '.pt'))
+              test(loaders, model, criterion_scratch, use_cuda)
+        
 
