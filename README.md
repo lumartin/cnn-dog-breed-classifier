@@ -1,68 +1,44 @@
-[//]: # (Image References)
+# Dog Breed Classification
 
-[image1]: ./images/sample_dog_output.png "Sample Output"
-[image2]: ./images/vgg16_model.png "VGG-16 Model Layers"
-[image3]: ./images/vgg16_model_draw.png "VGG16 Model Figure"
+[![Build Status](https://travis-ci.org/joemccann/dillinger.svg?branch=master)](https://travis-ci.org/joemccann/dillinger)
 
+This repository contains code supporting the process of building a dog breed classification system from scratch, including the Data Science and Software Engineering tasks needed for the project.
 
-## Project Overview
+  - Benchmark notebook: [dog_app.ipynb](https://github.com/lumartin/cnn-dog-breed-classifier/blob/master/dog_app.ipynb)
+  - Exploratory Data Analysis: [Analysis](https://github.com/lumartin/cnn-dog-breed-classifier/tree/master/analysis)
+  - Experiments with different hyperparameters and architectures: [Experiments](https://github.com/lumartin/cnn-dog-breed-classifier/tree/master/experiments)
+  - Utility framework for experimentation: [Utils](https://github.com/lumartin/cnn-dog-breed-classifier/tree/master/utils)
 
-Welcome to the Convolutional Neural Networks (CNN) project in the AI Nanodegree! In this project, you will learn how to build a pipeline that can be used within a web or mobile app to process real-world, user-supplied images.  Given an image of a dog, your algorithm will identify an estimate of the canine’s breed.  If supplied an image of a human, the code will identify the resembling dog breed.  
+## Machine Learning techniques
 
-![Sample Output][image1]
+Given that this is an image classification problem, I have decided to use Convolutional Neural Networks for the solution, as they are the state-of-the-art technology for this matter. 
 
-Along with exploring state-of-the-art CNN models for classification and localization, you will make important design decisions about the user experience for your app.  Our goal is that by completing this lab, you understand the challenges involved in piecing together a series of models designed to perform various tasks in a data processing pipeline.  Each model has its strengths and weaknesses, and engineering a real-world application often involves solving many problems without a perfect answer.  Your imperfect solution will nonetheless create a fun user experience!
+I have explored several ways to approach the problem, divided in two main groups: from-scratch implementation and transfer learning implementation. This type of problem is clearly better solved using a transfer learning approach, but I think it worth it to make some research in the other approach. Most of the work I have made for this project has been in this context. 
 
-
-## Project Instructions
-
-### Instructions
-
-1. Clone the repository and navigate to the downloaded folder.
-	
-	```	
-		git clone https://github.com/udacity/deep-learning-v2-pytorch.git
-		cd deep-learning-v2-pytorch/project-dog-classification
-	```
-    
-__NOTE:__ if you are using the Udacity workspace, you *DO NOT* need to re-download the datasets in steps 2 and 3 - they can be found in the `/data` folder as noted within the workspace Jupyter notebook.
-
-2. Download the [dog dataset](https://s3-us-west-1.amazonaws.com/udacity-aind/dog-project/dogImages.zip).  Unzip the folder and place it in the repo, at location `path/to/dog-project/dogImages`.  The `dogImages/` folder should contain 133 folders, each corresponding to a different dog breed.
-3. Download the [human dataset](http://vis-www.cs.umass.edu/lfw/lfw.tgz).  Unzip the folder and place it in the repo, at location `path/to/dog-project/lfw`.  If you are using a Windows machine, you are encouraged to use [7zip](http://www.7-zip.org/) to extract the folder. 
-4. Make sure you have already installed the necessary Python packages according to the README in the program repository.
-5. Open a terminal window and navigate to the project folder. Open the notebook and follow the instructions.
-	
-	```
-		jupyter notebook dog_app.ipynb
-	```
-
-__NOTE:__ While some code has already been implemented to get you started, you will need to implement additional functionality to successfully answer all of the questions included in the notebook. __Unless requested, do not modify code that has already been included.__
-
-__NOTE:__ In the notebook, you will need to train CNNs in PyTorch.  If your CNN is taking too long to train, feel free to pursue one of the options under the section __Accelerating the Training Process__ below.
+The main technology used has been [PyTorch](https://pytorch.org/), the Facebook Neural Networks Library. It gives me the ability to build and train neural networks from scratch, as well as use common transfer learning solutions. Together with PyTorch, I have made use of common Python libraries like Numpy and Matplotlib. [Imgaug](https://imgaug.readthedocs.io/en/latest/) is also used as augmentation library. 
 
 
+## Technology
 
-## (Optionally) Accelerating the Training Process 
+Most of the notebooks included in the Experiments folder are configured to work in Google Colab with Google Drive integrated, but most of the code is agnostic of the technology used. Of course I suggest using a Nvidia GPU for training.
 
-If your code is taking too long to run, you will need to either reduce the complexity of your chosen CNN architecture or switch to running your code on a GPU.  If you'd like to use a GPU, you can spin up an instance of your own:
+The code you can find inside the utils folder is an experimentation framework developed for PyTorch. This library exposes a single method called “run_experiments”, that receives a dictionary of hyperparameters and runs experiments making combinations of the values received. For example, we can specify that we want a set of experiments that combine two different optimizers, such as Adam  and Adagrad , and two learning rates, say 0.01 and 0.03. With these settings, the framework will perform the following experiments:
+- Optimizer: Adam, Learning Rate: 0.01
+- Optimizer: Adam, Learning Rate: 0.03
+- Optimizer: Adagrad, Learning Rate: 0.01
+- Optimizer: Adagrad, Learning Rate: 0.03
 
-#### Amazon Web Services
+More concretely, the allowed hyperparameters that can be included in the configuration are the following:
+- **augmentations**: Specify a list of imgaug augmentation methods.
+- **learning_rates**: List of learning rate values
+- **epochs**: Number of training epochs
+- **optimizers**: List of optimizers
+- **models**: List of models
 
-You can use Amazon Web Services to launch an EC2 GPU instance. (This costs money, but enrolled students should see a coupon code in their student `resources`.)
+This is the signature for the “run_experiments” function:
+```
+def run_experiments(paths, hyperparameters, model_file='model')
+```
+where paths is a dictionary specifying, hyperparameters is the dictionary described previously, and model_file is the name of the file that we want for storing our model. 
+Everything else is hidden (preprocessing, training and testing), but we can still use the generated model to make calculations. 
 
-## Evaluation
-
-Your project will be reviewed by a Udacity reviewer against the CNN project rubric.  Review this rubric thoroughly and self-evaluate your project before submission.  All criteria found in the rubric must meet specifications for you to pass.
-
-
-## Project Submission
-
-Your submission should consist of the github link to your repository.  Your repository should contain:
-- The `dog_app.ipynb` file with fully functional code, all code cells executed and displaying output, and all questions answered.
-- An HTML or PDF export of the project notebook with the name `report.html` or `report.pdf`.
-
-Please do __NOT__ include any of the project data sets provided in the `dogImages/` or `lfw/` folders.
-
-### Ready to submit your project?
-
-Click on the "Submit Project" button in the classroom and follow the instructions to submit!
